@@ -1,10 +1,9 @@
-from fastapi import APIRouter, File, Form, UploadFile
-from app.controller.s3 import s3_controller
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from app.models.student import Student
-
+from app.usecase.students.student import student_logic
 router = APIRouter()
 
-@router.post("/students/")
+@router.post("/students/insert")
 async def create_student(name: str = Form(...),
                         age: int = Form(...),
                         grade: int = Form(...),
@@ -14,6 +13,11 @@ async def create_student(name: str = Form(...),
     
     student = Student(name=name, age=age, grade=grade, email=email, password=password)
     profile_pic = await profile_pic.read()
-    s3_controller.insert_json(student.model_dump_json(), f"students/{email}/student.json")
-    s3_controller.insert_file(profile_pic, f"students/{email}/profile_pic.jpg")
-    return {"status": "ok", "student": student, "file_name": f"students/{email}/profile_pic.jpg"}
+    return student_logic.insert_student(student, profile_pic)
+
+@router.get("/students/get")
+async def get_student(email: str):
+    student, picture = student_logic.get_student(email)
+    if student is None:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return {"student": student, "picture": picture}

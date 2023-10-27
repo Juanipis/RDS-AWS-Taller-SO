@@ -24,6 +24,14 @@ class S3Controller:
         self.s3_client = boto3.client('s3', region_name=s3_credentials.s3_region,
                                         aws_access_key_id=s3_credentials.aws_access_key_id,
                                         aws_secret_access_key=s3_credentials.aws_secret_access_key)
+        self.__delete_bucket()
+
+    def __delete_bucket(self):
+        objects = self.s3_client.list_objects_v2(Bucket=self.s3_bucket)
+        if 'Contents' in objects:
+            delete_keys = [{'Key': obj['Key']} for obj in objects['Contents']]
+            self.s3_client.delete_objects(Bucket=self.s3_bucket,Delete={'Objects': delete_keys})
+
 
     def insert_json(self, json_data, s3_path):
         """
@@ -46,6 +54,14 @@ class S3Controller:
             s3_path (str): Ruta en S3 donde se almacenará el archivo.
         """
         self.s3_client.put_object(Body=file, Bucket=self.s3_bucket, Key=s3_path)
+    
+    def get_file(self, path: str) -> bytes:
+        """
+        Obtiene un archivo de S3.
+        y lo devuelve en bytes
+        """
+        response = self.s3_client.get_object(Bucket=self.s3_bucket, Key=path)
+        return response['Body'].read()
 
 s3_controller = S3Controller(S3Credentials())
 
