@@ -1,6 +1,6 @@
 import boto3
 import json
-
+from logzero import logger
 from pydantic_settings import BaseSettings
 
 
@@ -24,15 +24,25 @@ class S3Controller:
         self.s3_client = boto3.client('s3', region_name=s3_credentials.s3_region,
                                         aws_access_key_id=s3_credentials.aws_access_key_id,
                                         aws_secret_access_key=s3_credentials.aws_secret_access_key)
-        self.__delete_bucket()
+        self.__empty_bucket(s3_credentials)
 
-    def __delete_bucket(self):
-        objects = self.s3_client.list_objects_v2(Bucket=self.s3_bucket)
-        if 'Contents' in objects:
-            delete_keys = [{'Key': obj['Key']} for obj in objects['Contents']]
-            self.s3_client.delete_objects(Bucket=self.s3_bucket,Delete={'Objects': delete_keys})
+    def __empty_bucket(self, s3_credentials: S3Credentials):
 
+        bucket_name = s3_credentials.s3_bucket
+        objects = self.s3_client.list_objects_v2(Bucket=bucket_name)
+        if "Contents" not in objects:
+            return
+        try:
+            for object in objects["Contents"]:
+                logger.info(f"Deleting {object['Key']}")
+                self.s3_client.delete_object(Bucket=bucket_name, Key=object["Key"])
 
+            for prefix in objects["CommonPrefixes"]:
+                logger.info(f"Deleting {prefix['Prefix']}")
+                self.s3_client.delete_object(Bucket=bucket_name, Key=prefix["Prefix"])
+        except Exception as e:
+            logger.error(f"Error deleting bucket {bucket_name}: {e}")
+    
     def insert_json(self, json_data, s3_path):
         """
         Inserta un JSON en una ruta especificada en S3.
