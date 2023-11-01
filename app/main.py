@@ -1,10 +1,6 @@
 from fastapi import FastAPI
-from app.routers import student
+from app.routers import s3, student
 
 app = FastAPI()
 app.include_router(student.router)
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
+app.include_router(s3.router)

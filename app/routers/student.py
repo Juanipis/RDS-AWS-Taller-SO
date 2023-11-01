@@ -21,3 +21,7 @@ async def get_student(email: str):
     if student is None:
         raise HTTPException(status_code=404, detail="Student not found")
     return {"student": student, "picture": picture}
+
+@router.delete("/students/delete")
+async def delete_student(email: str):
+    return student_logic.delete_student_by_email(email)
